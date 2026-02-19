@@ -3,7 +3,7 @@
 import React from "react";
 import { Document } from "@/types/supabase";
 import { cn } from "@/lib/utils";
-import { Calendar, Target, Briefcase, ChevronRight, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Calendar, Target, Briefcase, ChevronRight, AlertCircle, CheckCircle, Clock, Trash2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { differenceInDays, isPast, isToday } from "date-fns";
 
@@ -11,9 +11,11 @@ interface ProjectCardProps {
     project: Document;
     workspaceName?: string;
     compact?: boolean;
+    onDiscard?: (project: Document) => void;
+    isArchived?: boolean;
 }
 
-export function ProjectCard({ project, workspaceName, compact = false }: ProjectCardProps) {
+export function ProjectCard({ project, workspaceName, compact = false, onDiscard, isArchived = false }: ProjectCardProps) {
     // --- Traffic Light Logic ---
     const getTrafficLightStatus = () => {
         const dueDate = project.due_date ? new Date(project.due_date) : null;
@@ -49,12 +51,13 @@ export function ProjectCard({ project, workspaceName, compact = false }: Project
     return (
         <div className={cn(
             "group relative bg-slate-900 border border-slate-800 rounded-xl overflow-hidden transition-all duration-300 hover:border-slate-700 hover:shadow-xl",
-            compact ? "p-3" : "p-4"
+            compact ? "p-3" : "p-4",
+            isArchived && "opacity-75 grayscale hover:grayscale-0 hover:opacity-100"
         )}>
             {/* Side Status Line */}
             <div className={cn(
                 "absolute left-0 top-0 bottom-0 w-1 transition-colors",
-                indicatorStyles[statusColor]
+                !isArchived ? indicatorStyles[statusColor] : "bg-slate-600"
             )} />
 
             <div className="flex items-start justify-between gap-4 pl-2">
@@ -63,12 +66,16 @@ export function ProjectCard({ project, workspaceName, compact = false }: Project
                         {/* Status Badge */}
                         <div className={cn(
                             "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1",
-                            statusStyles[statusColor]
+                            !isArchived ? statusStyles[statusColor] : "bg-slate-800 text-slate-500 border-slate-700"
                         )}>
-                            {statusColor === 'red' && <AlertCircle size={10} />}
-                            {statusColor === 'yellow' && <Clock size={10} />}
-                            {statusColor === 'green' && <CheckCircle size={10} />}
-                            {statusColor === 'red' ? 'Crítico' : statusColor === 'yellow' ? 'Atención' : 'En Curso'}
+                            {!isArchived && (
+                                <>
+                                    {statusColor === 'red' && <AlertCircle size={10} />}
+                                    {statusColor === 'yellow' && <Clock size={10} />}
+                                    {statusColor === 'green' && <CheckCircle size={10} />}
+                                </>
+                            )}
+                            {isArchived ? 'Archivado' : (statusColor === 'red' ? 'Crítico' : statusColor === 'yellow' ? 'Atención' : 'En Curso')}
                         </div>
 
                         {/* Workspace Tag */}
@@ -89,7 +96,7 @@ export function ProjectCard({ project, workspaceName, compact = false }: Project
                     {!compact && (
                         <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
                             {project.due_date && (
-                                <div className={cn("flex items-center gap-1.5", statusColor === 'red' ? "text-red-400" : "")}>
+                                <div className={cn("flex items-center gap-1.5", statusColor === 'red' && !isArchived ? "text-red-400" : "")}>
                                     <Calendar size={12} />
                                     <span>{new Date(project.due_date).toLocaleDateString()}</span>
                                 </div>
@@ -102,8 +109,9 @@ export function ProjectCard({ project, workspaceName, compact = false }: Project
                     )}
                 </div>
 
-                {/* Progress Circle (Mini) */}
+                {/* Actions & Progress */}
                 <div className="flex flex-col items-end gap-2">
+                    {/* Progress Circle (Mini) */}
                     <div className="relative w-8 h-8 flex items-center justify-center">
                         <svg className="w-full h-full transform -rotate-90">
                             <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-slate-800" />
@@ -113,20 +121,43 @@ export function ProjectCard({ project, workspaceName, compact = false }: Project
                                 strokeDasharray={88}
                                 strokeDashoffset={88 - (88 * (project.metadata?.progress || 0)) / 100}
                                 className={cn("transition-all duration-500",
-                                    statusColor === 'red' ? "text-red-500" :
-                                        statusColor === 'yellow' ? "text-amber-500" : "text-emerald-500"
+                                    isArchived ? "text-slate-600" : (
+                                        statusColor === 'red' ? "text-red-500" :
+                                            statusColor === 'yellow' ? "text-amber-500" : "text-emerald-500"
+                                    )
                                 )}
                             />
                         </svg>
                         <span className="absolute text-[8px] font-bold text-slate-400">{project.metadata?.progress || 0}%</span>
                     </div>
 
-                    <Link
-                        href={`/projects/${project.id}`}
-                        className="p-1 rounded-md text-slate-600 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
-                    >
-                        <ChevronRight size={16} />
-                    </Link>
+                    <div className="flex items-center gap-1">
+                        {onDiscard && (
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onDiscard(project);
+                                }}
+                                className={cn(
+                                    "p-1 rounded-md transition-colors",
+                                    isArchived
+                                        ? "text-emerald-500 hover:text-emerald-400 hover:bg-slate-800" // Restore
+                                        : "text-slate-600 hover:text-red-400 hover:bg-slate-800" // Delete
+                                )}
+                                title={isArchived ? "Restaurar" : "Archivar"}
+                            >
+                                {isArchived ? <RefreshCw size={16} /> : <Trash2 size={16} />}
+                            </button>
+                        )}
+
+                        <Link
+                            href={`/projects/${project.id}`}
+                            className="p-1 rounded-md text-slate-600 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
+                        >
+                            <ChevronRight size={16} />
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>
