@@ -67,10 +67,7 @@ export default function ProjectsListPage() {
         setLoading(false);
     };
 
-    const handleDiscard = async (e: React.MouseEvent, project: Document) => {
-        e.preventDefault(); // Prevent Link navigation
-        e.stopPropagation();
-
+    const handleDiscard = async (project: Document) => {
         const action = showArchived ? "RESTAURAR" : "ARCHIVAR";
         if (!confirm(`¿Estás seguro de ${action} el proyecto "${project.title}"?`)) return;
 
