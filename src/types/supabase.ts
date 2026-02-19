@@ -42,6 +42,7 @@ export type Idea = {
   start_date?: string; // ISO Date
   due_date?: string; // ISO Date
   idea_number?: number; // Serial ID
+  workspace_id: string;
 };
 
 export type Document = {
