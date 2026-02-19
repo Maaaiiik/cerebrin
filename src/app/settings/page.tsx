@@ -150,7 +150,7 @@ Reglas:
                                     <ul className="space-y-3 text-sm text-slate-300">
                                         <li className="flex justify-between">
                                             <span>Creado</span>
-                                            <span className="text-slate-500">{new Date(activeWorkspace.created_at).toLocaleDateString()}</span>
+                                            <span className="text-slate-500">{activeWorkspace.created_at ? new Date(activeWorkspace.created_at).toLocaleDateString() : "N/A"}</span>
                                         </li>
                                         <li className="flex justify-between">
                                             <span>ID</span>

@@ -3,6 +3,7 @@ export type Workspace = {
   name: string;
   slug: string;
   user_id: string;
+  created_at?: string;
 };
 
 
