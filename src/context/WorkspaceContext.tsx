@@ -8,7 +8,7 @@ import { supabaseClient } from "@/lib/supabase";
 interface WorkspaceContextType {
     workspaces: Workspace[];
     activeWorkspaceId: string | null;
-    setActiveWorkspaceId: (id: string) => void;
+    setActiveWorkspaceId: (id: string | null) => void;
     isLoading: boolean;
     refreshWorkspaces: () => Promise<void>;
 }
@@ -94,9 +94,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }, []); // Only run once on mount
 
     // Update localStorage when activeWorkspaceId changes
-    const handleSetActiveWorkspaceId = (id: string) => {
+    const handleSetActiveWorkspaceId = (id: string | null) => {
         setActiveWorkspaceId(id);
-        localStorage.setItem("activeWorkspaceId", id);
+        if (id) {
+            localStorage.setItem("activeWorkspaceId", id);
+        } else {
+            localStorage.removeItem("activeWorkspaceId");
+        }
     };
 
     return (
