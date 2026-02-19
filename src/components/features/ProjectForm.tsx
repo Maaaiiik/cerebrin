@@ -15,8 +15,14 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [templates, setTemplates] = useState<any[]>([]);
 
-    // Form State
+    // Project Fields
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [priority, setPriority] = useState(5);
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+
     // Task State
     const [tasks, setTasks] = useState<{ title: string; weight: number }[]>([
         { title: "Planificación Inicial", weight: 10 },
@@ -32,6 +38,38 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
         };
         getUser();
     }, []);
+
+    useEffect(() => {
+        if (isOpen && activeWorkspaceId) {
+            fetchTemplates();
+        }
+    }, [isOpen, activeWorkspaceId]);
+
+    const fetchTemplates = async () => {
+        const { data } = await supabaseClient
+            .from("process_templates")
+            .select("*")
+            .eq("workspace_id", activeWorkspaceId);
+        setTemplates(data || []);
+    };
+
+    const handleTemplateSelect = (templateId: string) => {
+        const template = templates.find(t => t.id === templateId);
+        if (template) {
+            // Confirm overwrite if tasks exist
+            if (tasks.length > 0 && !confirm("Esto reemplazará las tareas actuales. ¿Continuar?")) return;
+
+            setTasks(template.steps.map((s: any) => ({
+                title: s.title,
+                weight: s.weight || 0,
+                // We could also use s.description or s.delay_days if we extended the form
+            })));
+
+            // Optional: Set name/description if empty
+            if (!title) setTitle(template.name);
+            if (!description) setDescription(template.description || "");
+        }
+    };
 
     const addTask = () => {
         if (!newTask.trim()) return;
@@ -198,6 +236,23 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                                             <span className="truncate">{currentUser?.email || "Usuario Actual"}</span>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Template Selector */}
+                                <div className="space-y-4 bg-indigo-500/10 p-4 rounded-xl border border-indigo-500/20">
+                                    <label className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                                        <Zap size={14} className="text-yellow-400" /> Cargar desde Plantilla
+                                    </label>
+                                    <select
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-300 outline-none focus:border-indigo-500"
+                                        onChange={(e) => handleTemplateSelect(e.target.value)}
+                                        defaultValue=""
+                                    >
+                                        <option value="" disabled>-- Seleccionar Plantilla --</option>
+                                        {templates.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name} ({t.steps?.length || 0} pasos)</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {/* Title & Description */}

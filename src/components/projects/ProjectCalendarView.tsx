@@ -21,6 +21,8 @@ import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { supabaseClient } from "@/lib/supabase";
 import { TaskDetailPanel } from "./TaskDetailPanel";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { cn } from "@/lib/utils";
 
 interface ProjectCalendarViewProps {
     project: Document;
@@ -58,6 +60,21 @@ export function ProjectCalendarView({ project }: ProjectCalendarViewProps) {
         fetchTasks();
     }, [project.id]);
 
+    const { workspaces } = useWorkspace();
+
+    // Determine Color Theme based on Workspace
+    const currentWorkspace = workspaces.find(w => w.id === project.workspace_id);
+    const themeColor = useMemo(() => {
+        const name = currentWorkspace?.name?.toLowerCase() || "";
+        if (name.includes("duoc")) return "emerald";
+        if (name.includes("ebox")) return "blue";
+        return "indigo"; // Default
+    }, [currentWorkspace]);
+
+    const getThemeClass = (type: 'bg' | 'text' | 'border' | 'dot', strength: string = "500") => {
+        return `${type}-${themeColor}-${strength}`;
+    };
+
     // Calendar Logic
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
@@ -76,7 +93,10 @@ export function ProjectCalendarView({ project }: ProjectCalendarViewProps) {
     // Events Distribution
     const getEventsForDay = (day: Date) => {
         return tasks.filter(task => {
-            const due = task.metadata?.due_date;
+            // Check both root level due_date (if migrated) and metadata
+            // Schema usually has `due_date` column now? Let's check type definition if possible, but metadata is safe fallback.
+            // Based on TaskDetailPanel, it uses `task.due_date` first.
+            const due = task.due_date || (task.metadata as any)?.due_date;
             if (!due) return false;
             const dueDate = parseISO(due);
             return isValid(dueDate) && isSameDay(dueDate, day);
@@ -92,7 +112,10 @@ export function ProjectCalendarView({ project }: ProjectCalendarViewProps) {
             {/* Toolbar */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent capitalize">
+                    <h2 className={cn(
+                        "text-xl font-bold bg-clip-text text-transparent capitalize",
+                        themeColor === 'emerald' ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-blue-400 to-indigo-400"
+                    )}>
                         {format(currentDate, "MMMM yyyy", { locale: es })}
                     </h2>
                     <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700/50">
@@ -109,7 +132,7 @@ export function ProjectCalendarView({ project }: ProjectCalendarViewProps) {
                 </div>
 
                 {/* Stats / Filters can go here */}
-                {loading && <Loader2 className="animate-spin text-indigo-500" size={20} />}
+                {loading && <Loader2 className={`animate-spin ${getThemeClass('text')}`} size={20} />}
             </div>
 
             {/* Grid Header */}
@@ -131,17 +154,21 @@ export function ProjectCalendarView({ project }: ProjectCalendarViewProps) {
                     return (
                         <div
                             key={day.toISOString()}
-                            className={`
-                                min-h-[100px] border-b border-r border-slate-800/50 p-2 transition-colors hover:bg-slate-900/40 relative group
-                                ${!isCurrentMonth ? "bg-slate-900/20 text-slate-600" : "bg-slate-950/20"}
-                            `}
+                            className={cn(
+                                "min-h-[100px] border-b border-r border-slate-800/50 p-2 transition-colors relative group",
+                                !isCurrentMonth ? "bg-slate-900/20 text-slate-600" : "bg-slate-950/20",
+                                // Hover effect matching theme
+                                themeColor === 'emerald' ? "hover:bg-emerald-950/10" : "hover:bg-blue-950/10"
+                            )}
                         >
                             <div className="flex justify-between items-start mb-1">
                                 <span
-                                    className={`
-                                        text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full
-                                        ${isTodayDate ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400"}
-                                    `}
+                                    className={cn(
+                                        "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-all",
+                                        isTodayDate
+                                            ? `${getThemeClass('bg')} text-white shadow-lg`
+                                            : "text-slate-400"
+                                    )}
                                 >
                                     {format(day, "d")}
                                 </span>
@@ -157,22 +184,22 @@ export function ProjectCalendarView({ project }: ProjectCalendarViewProps) {
                                     <button
                                         key={task.id}
                                         onClick={() => setSelectedTask(task)}
-                                        className="w-full text-left px-2 py-1 rounded text-[10px] font-medium bg-slate-800 border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-700 transition truncate flex items-center gap-1 group/item"
+                                        className={cn(
+                                            "w-full text-left px-2 py-1 rounded text-[10px] font-medium border transition truncate flex items-center gap-1 group/item",
+                                            task.category === 'Finalizado'
+                                                ? "bg-slate-900 border-slate-800 opacity-60 hover:opacity-100"
+                                                : `bg-slate-800 border-slate-700 ${themeColor === 'emerald' ? 'hover:border-emerald-500/50' : 'hover:border-blue-500/50'} hover:bg-slate-700`
+                                        )}
                                     >
-                                        <div className={`
-                                            w-1.5 h-1.5 rounded-full flex-none
-                                            ${task.category === 'Finalizado' ? 'bg-emerald-500' : 'bg-amber-500'}
-                                        `} />
+                                        <div className={cn(
+                                            "w-1.5 h-1.5 rounded-full flex-none",
+                                            task.category === 'Finalizado' ? "bg-slate-500" : getThemeClass('bg')
+                                        )} />
                                         <span className={task.category === 'Finalizado' ? 'line-through text-slate-500' : 'text-slate-300'}>
                                             {task.title}
                                         </span>
                                     </button>
                                 ))}
-                            </div>
-
-                            {/* Add Task Button (Ghost) */}
-                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {/* Future: Add task on this date */}
                             </div>
                         </div>
                     );
@@ -180,23 +207,12 @@ export function ProjectCalendarView({ project }: ProjectCalendarViewProps) {
             </div>
 
             {/* Task Detail Modal */}
-            {/* Reusing the panel logic - we can pass a close handler or use the same global context approach if available. 
-                Since ProjectListView uses a global provider or internal state, let's adapt.
-                Assuming TaskDetailPanel works via 'onClose' prop or similar.
-                Checking TaskDetailPanel signature...
-            */}
             <TaskDetailPanel
                 task={selectedTask}
                 isOpen={!!selectedTask}
                 onClose={() => setSelectedTask(null)}
                 onSave={async (id, updates) => {
-                    // Since we don't have the full deeply nested update logic here like in list view,
-                    // we can just update the local state optimistically or re-fetch.
-                    // Simple re-fetch for now or manual update.
                     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-
-                    // And trigger DB update via supabase (TaskDetailPanel might handle the actual save call or expect us to?)
-                    // TaskDetailPanel expects 'onSave'.
                     const { error } = await supabaseClient.from('documents').update(updates).eq('id', id);
                     if (error) console.error(error);
                 }}

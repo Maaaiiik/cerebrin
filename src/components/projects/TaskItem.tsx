@@ -74,7 +74,11 @@ export function TaskItem({ task, onUpdate, onDelete, onDetailClick, level, wbsNu
     const saveField = async (field: 'weight' | 'progress' | 'title' | 'start_date' | 'due_date', value: any) => {
         // Update Local State
         if (field === 'weight') setLocalWeight(value);
-        if (field === 'progress') setLocalProgress(value);
+        if (field === 'progress') {
+            const clamped = Math.min(100, Math.max(0, Number(value)));
+            setLocalProgress(clamped);
+            value = clamped; // Use clamped value for payload
+        }
         if (field === 'title') setEditTitle(value);
 
         // Prepare Update
@@ -204,7 +208,7 @@ export function TaskItem({ task, onUpdate, onDelete, onDetailClick, level, wbsNu
     const isUnbalanced = isExpanded && subtasks.length > 0 && Math.abs(weightsSum - 100) > 1;
 
     return (
-        <motion.div layout loading="lazy" className="relative">
+        <motion.div layout className="relative">
             <div className={cn(
                 "grid grid-cols-12 gap-2 items-center bg-slate-900/50 hover:bg-slate-800 border-b border-slate-800/50 p-3 rounded-lg transition-colors group",
                 level > 0 && "ml-4 border-l-2 border-l-slate-800"

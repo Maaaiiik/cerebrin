@@ -17,6 +17,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { DashboardDetailSheet, DetailType } from "@/components/dashboard/DashboardDetailSheet";
+import { ProjectCard } from "@/components/features/ProjectCard";
 
 export default function Home() {
   const { activeWorkspaceId, workspaces, isLoading: isContextLoading } = useWorkspace();
@@ -28,8 +30,11 @@ export default function Home() {
     upcomingTasks: [] as any[],
     activeProjects: [] as any[],
     recentActivity: [] as any[],
+    agentPrecision: 0,
     loading: true
   });
+
+  const [detailType, setDetailType] = useState<DetailType>(null);
 
   useEffect(() => {
     async function fetchStats() {
@@ -52,6 +57,7 @@ export default function Home() {
               { id: "1", action_type: "promote_idea", description: "Idea promovida a proyecto", created_at: new Date().toISOString() },
               { id: "2", action_type: "agent_sync", description: "Sincronización de agente completada", created_at: new Date(Date.now() - 3600000).toISOString() }
             ],
+            agentPrecision: 92,
             loading: false
           });
         }, 1000);
@@ -98,12 +104,29 @@ export default function Home() {
           .order("created_at", { ascending: false })
           .limit(4);
 
+        // 5. Agent Precision (Approved / (Approved + Rejected))
+        const { count: approvedCount } = await supabaseClient
+          .from("idea_pipeline")
+          .select("*", { count: 'exact', head: true })
+          .eq("workspace_id", activeWorkspaceId)
+          .eq("status", "aprobada");
+
+        const { count: rejectedCount } = await supabaseClient
+          .from("idea_pipeline")
+          .select("*", { count: 'exact', head: true })
+          .eq("workspace_id", activeWorkspaceId)
+          .eq("status", "rechazada");
+
+        const totalEvaluated = (approvedCount || 0) + (rejectedCount || 0);
+        const precision = totalEvaluated > 0 ? Math.round(((approvedCount || 0) / totalEvaluated) * 100) : 100; // Default to 100 if no data
+
         setStats({
           ideasCount: ideasCount || 0,
           activeTasksCount: tasksCount || 0,
           upcomingTasks: upcoming || [],
           activeProjects: projects || [],
           recentActivity: activity || [],
+          agentPrecision: precision,
           loading: false
         });
 
@@ -166,7 +189,13 @@ export default function Home() {
         ) : (
           <>
             {/* Metric 1 */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-indigo-500/50 transition-all group">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              onClick={() => setDetailType('ideas')}
+              className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-indigo-500/50 transition-all group cursor-pointer"
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                   <Lightbulb size={24} />
@@ -180,7 +209,13 @@ export default function Home() {
             </motion.div>
 
             {/* Metric 2 */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-purple-500/50 transition-all group">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              onClick={() => setDetailType('tasks')}
+              className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-purple-500/50 transition-all group cursor-pointer"
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-colors">
                   <FileText size={24} />
@@ -194,12 +229,18 @@ export default function Home() {
             </motion.div>
 
             {/* Metric 3 */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-pink-500/50 transition-all group">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              onClick={() => setDetailType('activity')}
+              className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-pink-500/50 transition-all group cursor-pointer"
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-pink-500/10 text-pink-400 rounded-xl group-hover:bg-pink-500 group-hover:text-white transition-colors">
                   <BrainCircuit size={24} />
                 </div>
-                <span className="text-3xl font-bold text-slate-100">92%</span>
+                <span className="text-3xl font-bold text-slate-100">{stats.agentPrecision}%</span>
               </div>
               <div className="flex items-center justify-between">
                 <h3 className="text-slate-400 font-medium text-sm">Precisión del Agente</h3>
@@ -213,7 +254,10 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {/* Active Projects (Workspace Specific) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div
+          onClick={() => setDetailType('projects')}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 cursor-pointer hover:border-blue-500/30 transition-all"
+        >
           <h2 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
             <BrainCircuit size={18} className="text-blue-400" />
             Proyectos Activos
@@ -227,25 +271,23 @@ export default function Home() {
             <div className="text-slate-500 text-sm py-4">
               No hay proyectos activos.
               <br />
-              <Link href="/documents" className="text-indigo-400 hover:underline mt-2 inline-block">crear uno</Link>
+              <span className="text-indigo-400 hover:underline mt-2 inline-block">crear uno</span>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <div className="grid grid-cols-1 gap-3">
               {stats.activeProjects?.map((proj: any) => (
-                <li key={proj.id} className="p-4 bg-slate-950/50 rounded-xl border border-slate-800/50 hover:border-blue-500/30 transition-all group">
-                  <h3 className="text-slate-200 font-semibold text-sm group-hover:text-blue-400 transition-colors">{proj.title}</h3>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{proj.ai_analysis || "Sin descripción"}</p>
-                  <span className="inline-block mt-2 text-[10px] uppercase font-bold text-slate-600 bg-slate-900 px-1.5 py-0.5 rounded">
-                    {proj.category}
-                  </span>
-                </li>
+                <ProjectCard key={proj.id} project={proj} compact />
               ))}
-            </ul>
+            </div>
           )}
+
         </div>
 
         {/* Upcoming Due Dates (Workspace Specific) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div
+          onClick={() => setDetailType('tasks')}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 cursor-pointer hover:border-orange-500/30 transition-all"
+        >
           <h2 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
             <Calendar size={18} className="text-orange-400" />
             Próximos Vencimientos
@@ -280,7 +322,10 @@ export default function Home() {
         </div>
 
         {/* Activity Feed Mini (Workspace Specific) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div
+          onClick={() => setDetailType('activity')}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 cursor-pointer hover:border-emerald-500/30 transition-all"
+        >
           <h2 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
             <Activity size={18} className="text-emerald-400" />
             Actividad Reciente
@@ -309,6 +354,13 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      <DashboardDetailSheet
+        isOpen={!!detailType}
+        onClose={() => setDetailType(null)}
+        type={detailType}
+        workspaceId={activeWorkspaceId}
+      />
     </div>
   );
 }

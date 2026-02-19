@@ -11,6 +11,7 @@ import {
     FileText,
     Search,
     Menu,
+    Settings,
     ChevronLeft,
     ChevronRight,
     BrainCircuit,
@@ -19,13 +20,18 @@ import {
     Activity,
     Calendar,
     ChevronDown,
-    Briefcase
+    Briefcase,
+    Bell
 } from "lucide-react";
+import { useNotifications } from "@/components/providers/NotificationContext";
+import { NotificationSheet } from "@/components/dashboard/NotificationSheet";
 
 export function Sidebar() {
     const { workspaces, activeWorkspaceId, setActiveWorkspaceId, refreshWorkspaces, isLoading } = useWorkspace();
+    const { unreadCount } = useNotifications();
     const [collapsed, setCollapsed] = useState(false);
     const [tableroOpen, setTableroOpen] = useState(true);
+    const [showNotifications, setShowNotifications] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -50,157 +56,185 @@ export function Sidebar() {
         { name: "Consejo de Modelos", href: "/council", icon: Users },
         { name: "Calendario", href: "/calendar", icon: Calendar },
         { name: "Historial del Agente", href: "/activity", icon: Activity },
+        { name: "Configuración", href: "/settings", icon: Settings }, // Added Settings
     ];
 
     return (
-        <aside
-            className={cn(
-                "bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col h-screen text-slate-300 shadow-xl z-50",
-                collapsed ? "w-16" : "w-64"
-            )}
-        >
-            {/* Header / Collapse Trigger */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                <div className={cn("font-bold text-lg text-indigo-400 tracking-tight flex items-center gap-2", collapsed && "hidden")}>
-                    <BrainCircuit size={24} />
-                    <span>OpenClaw</span>
-                </div>
-                {collapsed && <div className="mx-auto"><BrainCircuit size={24} className="text-indigo-400" /></div>}
-
-                <button
-                    onClick={toggleSidebar}
-                    className={cn(
-                        "p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-all",
-                        collapsed ? "hidden" : "block"
-                    )}
-                >
-                    <ChevronLeft size={16} />
-                </button>
-                {collapsed && (
-                    <button onClick={toggleSidebar} className="mx-auto mt-2 p-1 hover:text-white"><ChevronRight size={16} /></button>
+        <>
+            <aside
+                className={cn(
+                    "bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col h-screen text-slate-300 shadow-xl z-50",
+                    collapsed ? "w-16" : "w-64"
                 )}
-            </div>
+            >
+                {/* Header / Collapse Trigger */}
+                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                    <div className={cn("font-bold text-lg text-indigo-400 tracking-tight flex items-center gap-2", collapsed && "hidden")}>
+                        <BrainCircuit size={24} />
+                        <span>OpenClaw</span>
+                    </div>
+                    {collapsed && <div className="mx-auto"><BrainCircuit size={24} className="text-indigo-400" /></div>}
 
-            {/* Navigation */}
-            <nav className="flex-1 py-6 space-y-1.5 overflow-y-auto px-3">
-                {navItems.map((item, index) => {
-                    const Icon = item.icon;
+                    <button
+                        onClick={toggleSidebar}
+                        className={cn(
+                            "p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-all",
+                            collapsed ? "hidden" : "block"
+                        )}
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+                    {collapsed && (
+                        <button onClick={toggleSidebar} className="mx-auto mt-2 p-1 hover:text-white"><ChevronRight size={16} /></button>
+                    )}
+                </div>
 
-                    if (item.isGroup) {
-                        const isActive = pathname === "/" && !collapsed; // Parent is active if we are on dashboard?
+                {/* Navigation */}
+                <nav className="flex-1 py-6 space-y-1.5 overflow-y-auto px-3">
+                    {navItems.map((item, index) => {
+                        const Icon = item.icon;
 
-                        // If collapsed, we can't show sub-items easily in this designs without a popover.
-                        // For now, if collapsed, we essentially hide the children logic or show just the icon.
-                        // Let's hide sub-items if collapsed and just show the parent icon which potentially expands sidebar.
+                        if (item.isGroup) {
+                            const isActive = pathname === "/" && !collapsed; // Parent is active if we are on dashboard?
 
-                        return (
-                            <div key={index}>
-                                <div
-                                    className={cn(
-                                        "flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer select-none",
-                                        "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
-                                        collapsed ? "justify-center" : "justify-between"
-                                    )}
-                                    onClick={() => {
-                                        if (collapsed) setCollapsed(false);
-                                        setTableroOpen(!tableroOpen);
-                                    }}
-                                >
-                                    <div className="flex items-center">
-                                        <Icon
-                                            size={20}
-                                            className={cn(
-                                                "shrink-0 transition-colors",
-                                                "text-slate-500 group-hover:text-slate-300",
-                                                !collapsed && "mr-3"
-                                            )}
-                                        />
-                                        {!collapsed && <span className="font-medium text-sm">{item.name}</span>}
+                            // If collapsed, we can't show sub-items easily in this designs without a popover.
+                            // For now, if collapsed, we essentially hide the children logic or show just the icon.
+                            // Let's hide sub-items if collapsed and just show the parent icon which potentially expands sidebar.
+
+                            return (
+                                <div key={index}>
+                                    <div
+                                        className={cn(
+                                            "flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer select-none",
+                                            "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
+                                            collapsed ? "justify-center" : "justify-between"
+                                        )}
+                                        onClick={() => {
+                                            if (collapsed) setCollapsed(false);
+                                            setTableroOpen(!tableroOpen);
+                                        }}
+                                    >
+                                        <div className="flex items-center">
+                                            <Icon
+                                                size={20}
+                                                className={cn(
+                                                    "shrink-0 transition-colors",
+                                                    "text-slate-500 group-hover:text-slate-300",
+                                                    !collapsed && "mr-3"
+                                                )}
+                                            />
+                                            {!collapsed && <span className="font-medium text-sm">{item.name}</span>}
+                                        </div>
+                                        {!collapsed && (
+                                            <div className="text-slate-600">
+                                                {tableroOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                            </div>
+                                        )}
                                     </div>
-                                    {!collapsed && (
-                                        <div className="text-slate-600">
-                                            {tableroOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+
+                                    {/* Workspaces List */}
+                                    {!collapsed && tableroOpen && (
+                                        <div className="mt-1 ml-4 space-y-0.5 border-l border-slate-800 pl-2">
+                                            {isLoading && <div className="px-3 py-1 text-xs text-slate-600">Cargando...</div>}
+                                            {workspaces.map(ws => (
+                                                <button
+                                                    key={ws.id}
+                                                    onClick={() => handleWorkspaceClick(ws.id)}
+                                                    className={cn(
+                                                        "w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2",
+                                                        activeWorkspaceId === ws.id && pathname === "/"
+                                                            ? "bg-indigo-500/10 text-indigo-400 font-medium"
+                                                            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+                                                    )}
+                                                >
+                                                    <div className={cn(
+                                                        "w-1.5 h-1.5 rounded-full",
+                                                        activeWorkspaceId === ws.id && pathname === "/" ? "bg-indigo-400" : "bg-slate-700"
+                                                    )} />
+                                                    <span className="truncate">{ws.name}</span>
+                                                </button>
+                                            ))}
+                                            <button
+                                                onClick={() => refreshWorkspaces()}
+                                                className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:text-emerald-400 flex items-center gap-2"
+                                            >
+                                                <RefreshCw size={10} className={cn(isLoading && "animate-spin")} />
+                                                <span>Actualizar lista</span>
+                                            </button>
                                         </div>
                                     )}
                                 </div>
+                            );
+                        }
 
-                                {/* Workspaces List */}
-                                {!collapsed && tableroOpen && (
-                                    <div className="mt-1 ml-4 space-y-0.5 border-l border-slate-800 pl-2">
-                                        {isLoading && <div className="px-3 py-1 text-xs text-slate-600">Cargando...</div>}
-                                        {workspaces.map(ws => (
-                                            <button
-                                                key={ws.id}
-                                                onClick={() => handleWorkspaceClick(ws.id)}
-                                                className={cn(
-                                                    "w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2",
-                                                    activeWorkspaceId === ws.id && pathname === "/"
-                                                        ? "bg-indigo-500/10 text-indigo-400 font-medium"
-                                                        : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "w-1.5 h-1.5 rounded-full",
-                                                    activeWorkspaceId === ws.id && pathname === "/" ? "bg-indigo-400" : "bg-slate-700"
-                                                )} />
-                                                <span className="truncate">{ws.name}</span>
-                                            </button>
-                                        ))}
-                                        <button
-                                            onClick={() => refreshWorkspaces()}
-                                            className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:text-emerald-400 flex items-center gap-2"
-                                        >
-                                            <RefreshCw size={10} className={cn(isLoading && "animate-spin")} />
-                                            <span>Actualizar lista</span>
-                                        </button>
-                                    </div>
+                        const isActive = pathname === item.href;
+                        return (
+                            <Link
+                                key={item.href || item.name}
+                                href={item.href || "#"}
+                                className={cn(
+                                    "flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group",
+                                    isActive
+                                        ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/5"
+                                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
+                                    collapsed ? "justify-center" : "justify-start"
+                                )}
+                            >
+                                <Icon
+                                    size={20}
+                                    className={cn(
+                                        "shrink-0 transition-colors",
+                                        isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300",
+                                        !collapsed && "mr-3"
+                                    )}
+                                />
+                                {!collapsed && <span className="font-medium text-sm">{item.name}</span>}
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                {/* Footer / Search Trigger */}
+                <div className="p-4 border-t border-slate-800 space-y-2">
+                    <button
+                        onClick={() => setShowNotifications(true)}
+                        className={cn(
+                            "w-full flex items-center bg-slate-900 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 rounded-lg p-2.5 transition-all group relative",
+                            collapsed ? "justify-center" : "justify-between"
+                        )}
+                    >
+                        <div className="flex items-center">
+                            <div className="relative">
+                                <Bell size={16} className="text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-slate-900" />
                                 )}
                             </div>
-                        );
-                    }
+                            {!collapsed && <span className="ml-2 text-sm font-medium">Notificaciones</span>}
+                        </div>
+                        {!collapsed && unreadCount > 0 && (
+                            <span className="text-[10px] bg-pink-500/10 text-pink-400 border border-pink-500/20 rounded px-1.5 py-0.5 font-bold">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </button>
 
-                    const isActive = pathname === item.href;
-                    return (
-                        <Link
-                            key={item.href || item.name}
-                            href={item.href || "#"}
-                            className={cn(
-                                "flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group",
-                                isActive
-                                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/5"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
-                                collapsed ? "justify-center" : "justify-start"
-                            )}
-                        >
-                            <Icon
-                                size={20}
-                                className={cn(
-                                    "shrink-0 transition-colors",
-                                    isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300",
-                                    !collapsed && "mr-3"
-                                )}
-                            />
-                            {!collapsed && <span className="font-medium text-sm">{item.name}</span>}
-                        </Link>
-                    );
-                })}
-            </nav>
+                    <button
+                        className={cn(
+                            "w-full flex items-center bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 text-slate-400 rounded-lg p-2.5 transition-all group",
+                            collapsed ? "justify-center" : "justify-between"
+                        )}
+                    >
+                        <div className="flex items-center">
+                            <Search size={16} className="text-slate-500 group-hover:text-slate-300 transition-colors" />
+                            {!collapsed && <span className="ml-2 text-sm font-medium">Buscar...</span>}
+                        </div>
+                        {!collapsed && <span className="text-[10px] bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-slate-500">⌘K</span>}
+                    </button>
+                </div>
+            </aside>
 
-            {/* Footer / Search Trigger */}
-            <div className="p-4 border-t border-slate-800">
-                <button
-                    className={cn(
-                        "w-full flex items-center bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 text-slate-400 rounded-lg p-2.5 transition-all group",
-                        collapsed ? "justify-center" : "justify-between"
-                    )}
-                >
-                    <div className="flex items-center">
-                        <Search size={16} className="text-slate-500 group-hover:text-slate-300 transition-colors" />
-                        {!collapsed && <span className="ml-2 text-sm font-medium">Buscar...</span>}
-                    </div>
-                    {!collapsed && <span className="text-[10px] bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-slate-500">⌘K</span>}
-                </button>
-            </div>
-        </aside>
+            <NotificationSheet isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+        </>
     );
 }

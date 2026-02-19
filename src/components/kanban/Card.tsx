@@ -5,7 +5,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { KanbanItem } from "@/types/supabase";
 import { cn } from "@/lib/utils";
-import { Calendar, Tag, GitMerge, Lightbulb, FileText, Link as LinkIcon, Folder, CheckSquare } from "lucide-react";
+import { Calendar, Tag, GitMerge, Lightbulb, FileText, Link as LinkIcon, Folder, CheckSquare, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 

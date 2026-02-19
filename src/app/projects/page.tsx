@@ -7,6 +7,7 @@ import { Document } from "@/types/supabase";
 import { Loader2, Briefcase, Plus, FolderOpen, ArrowRight, Clock, Filter, Trash2, RefreshCw, Zap } from "lucide-react";
 import Link from "next/link";
 import { ProjectForm } from "@/components/features/ProjectForm";
+import { ProjectCard } from "@/components/features/ProjectCard";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -198,71 +199,19 @@ export default function ProjectsListPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {projects.map((project, i) => (
-                        <Link href={`/projects/${project.id}`} key={project.id}>
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                className={cn(
-                                    "group bg-slate-900 hover:bg-slate-800/80 rounded-2xl p-6 border transition-all duration-300 relative overflow-hidden h-full flex flex-col shadow-lg hover:shadow-xl",
-                                    showArchived ? "border-red-900/30 opacity-75" : "border-slate-800 hover:border-emerald-500/30"
-                                )}
-                            >
-                                <div className={cn(
-                                    "absolute top-0 left-0 w-1 h-full transition-colors",
-                                    showArchived ? "bg-red-500/50" : "bg-emerald-500/50 group-hover:bg-emerald-500"
-                                )} />
-
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700">
-                                                {getWorkspaceName(project.workspace_id)}
-                                            </span>
-                                            {showArchived && (
-                                                <span className="px-2 py-0.5 rounded text-[10px] bg-red-900/50 text-red-400 border border-red-900">
-                                                    ARCHIVADO
-                                                </span>
-                                            )}
-                                        </div>
-                                        <h3 className="text-lg font-bold text-slate-100 group-hover:text-emerald-300 transition-colors line-clamp-1 mt-1">
-                                            {project.title}
-                                        </h3>
-                                    </div>
-                                    <button
-                                        onClick={(e) => handleDiscard(e, project)}
-                                        className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-slate-800 transition-colors opacity-0 group-hover:opacity-100"
-                                        title={showArchived ? "Restaurar Proyecto" : "Archivar Proyecto"}
-                                    >
-                                        {showArchived ? <RefreshCw size={14} /> : <Trash2 size={14} />}
-                                    </button>
-                                </div>
-
-                                <p className="text-sm text-slate-400 mb-6 line-clamp-2 flex-1">
-                                    {project.content || "Sin descripción."}
-                                </p>
-
-                                <div className="mt-auto pt-4 border-t border-slate-800/50">
-                                    <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-                                        <span className="flex items-center gap-1"><Clock size={10} /> {project.created_at ? formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: es }) : ''}</span>
-                                        <span className="font-mono text-emerald-400 font-bold">{getProgress(project).toFixed(0)}%</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                                        <div
-                                            className={cn(
-                                                "h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]",
-                                                showArchived ? "bg-slate-600" : "bg-emerald-500"
-                                            )}
-                                            style={{ width: `${getProgress(project)}%` }}
-                                        />
-                                    </div>
-
-                                    <div className="mt-4 flex items-center justify-end text-xs font-bold text-emerald-500 uppercase tracking-wider opacity-60 group-hover:opacity-100 transition-all">
-                                        <span className="mr-1 group-hover:mr-2 transition-all">Gestionar</span> <ArrowRight size={12} />
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </Link>
+                        <motion.div
+                            key={project.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                        >
+                            <ProjectCard
+                                project={project}
+                                workspaceName={getWorkspaceName(project.workspace_id)}
+                                onDiscard={handleDiscard}
+                                isArchived={showArchived}
+                            />
+                        </motion.div>
                     ))}
                 </div>
             )}

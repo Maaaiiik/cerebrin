@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  app:
+    container_name: panel-openclaw
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    networks:
+      - nginx-proxy
+      - default
+
+networks:
+  nginx-proxy:
+    external: true # This network must be created by your NPM stack

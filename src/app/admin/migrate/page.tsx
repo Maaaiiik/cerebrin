@@ -54,7 +54,73 @@ export default function MigrationPage() {
             }
             addLog(`Successfully updated ${updatedCount} documents.`);
 
-            // 3. Update API Keys (if logic needed, for now just documents)
+            // 3. Fix Projects without metadata structure
+            addLog("Checking Projects Metadata...");
+            const { data: projects } = await supabaseClient
+                .from("documents")
+                .select("*")
+                .eq("type", "project");
+
+            if (projects) {
+                for (const p of projects) {
+                    const meta = p.metadata as any || {};
+                    let updates: any = {};
+                    let needsUpdate = false;
+
+                    if (meta.progress === undefined) {
+                        updates.progress = 0;
+                        needsUpdate = true;
+                    }
+                    if (!meta.status) {
+                        updates.status = "active";
+                        needsUpdate = true;
+                    }
+
+                    if (needsUpdate) {
+                        await supabaseClient
+                            .from("documents")
+                            .update({
+                                metadata: { ...meta, ...updates }
+                            })
+                            .eq("id", p.id);
+                        addLog(`Fixed Project Meta: ${p.title}`);
+                    }
+                }
+            }
+
+            // 4. Fix Tasks without progress/weight
+            addLog("Checking Tasks Metadata...");
+            const { data: tasks } = await supabaseClient
+                .from("documents")
+                .select("*")
+                .eq("type", "task");
+
+            if (tasks) {
+                for (const t of tasks) {
+                    const meta = t.metadata as any || {};
+                    let updates: any = {};
+                    let needsUpdate = false;
+
+                    if (meta.progress === undefined) {
+                        updates.progress = 0;
+                        needsUpdate = true;
+                    }
+                    if (meta.weight === undefined) {
+                        updates.weight = 0;
+                        needsUpdate = true;
+                    }
+
+                    if (needsUpdate) {
+                        await supabaseClient
+                            .from("documents")
+                            .update({
+                                metadata: { ...meta, ...updates }
+                            })
+                            .eq("id", t.id);
+                        addLog(`Fixed Task Meta: ${t.title}`);
+                    }
+                }
+            }
 
             setStatus("done");
             addLog("Migration completed successfully.");

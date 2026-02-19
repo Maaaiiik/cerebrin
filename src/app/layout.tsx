@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
+import { NotificationProvider } from "@/components/providers/NotificationContext";
 
 // Example local fonts - assuming create-next-app defaults
 // const geistSans = localFont({
@@ -31,12 +32,14 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="antialiased bg-slate-950 text-slate-50">
         <WorkspaceProvider>
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 overflow-auto relative">
-              {children}
-            </main>
-          </div>
+          <NotificationProvider>
+            <div className="flex h-screen overflow-hidden">
+              <Sidebar />
+              <main className="flex-1 overflow-auto relative">
+                {children}
+              </main>
+            </div>
+          </NotificationProvider>
         </WorkspaceProvider>
       </body>
     </html>
