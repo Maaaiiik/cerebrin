@@ -1,4 +1,3 @@
-```javascript
 import { NextResponse } from 'next/server';
 
 const AGENT_RULES_MARKDOWN = `
