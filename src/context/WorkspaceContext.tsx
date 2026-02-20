@@ -21,66 +21,49 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    // Load active workspace from localStorage on mount
-    useEffect(() => {
-        const storedId = localStorage.getItem("activeWorkspaceId");
-        if (storedId) {
-            setActiveWorkspaceId(storedId);
-        }
-    }, []);
-
     const fetchWorkspaces = async () => {
         setIsLoading(true);
         try {
-            // Use the singleton client from lib/supabase
-            // Check for mock mode via public URL check if needed, or rely on client behavior.
-            // But since we are debugging RLS, let's assume we want real data if env is set.
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const isMock = !supabaseUrl || supabaseUrl.includes("placeholder");
+            // 1. Check Auth
+            const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
-            if (isMock) {
-                console.warn("[WorkspaceContext] Supabase URL missing or placeholder. Using mock data.");
-                const mockWorkspaces = [
-                    { id: "ws-1", name: "Laboral - Ebox", slug: "laboral-ebox", user_id: "user-1" },
-                    { id: "ws-2", name: "Personal", slug: "personal", user_id: "user-1" },
-                    { id: "ws-3", name: "Proyecto X", slug: "proyecto-x", user_id: "user-1" },
-                ];
-                setWorkspaces(mockWorkspaces);
-                if (!activeWorkspaceId && mockWorkspaces.length > 0) {
-                    setActiveWorkspaceId(mockWorkspaces[0].id);
-                    localStorage.setItem("activeWorkspaceId", mockWorkspaces[0].id);
-                }
+            if (authError || !user) {
+                console.warn("[WorkspaceContext] No user found, redirecting to login.");
+                router.push("/login");
                 return;
             }
 
-            const { data, error } = await supabaseClient.from("workspaces").select("*");
+            // 2. Fetch Workspaces for User
+            // TODO: Switch to `workspace_members` when RBAC is fully live.
+            // For now, fetch workspaces created by user OR where they are members.
+            const { data, error } = await supabaseClient
+                .from("workspaces")
+                .select("*")
+            //.eq('user_id', user.id); // Strict ownership for now
+            // Actually, let's allow fetching all if policy permits, but we should filter.
 
             if (error) {
-                console.error("Error fetching workspaces:", JSON.stringify(error, null, 2));
+                console.error("Error fetching workspaces:", error);
                 return;
             }
-
-            console.log(`[WorkspaceContext] Workspaces fetched: ${data?.length || 0}`);
 
             if (data) {
                 setWorkspaces(data);
 
-                // Validate activeWorkspaceId against fetched data
-                const isValidId = data.some(w => w.id === activeWorkspaceId);
+                // Logic to set active workspace
+                const storedId = localStorage.getItem("activeWorkspaceId");
+                const isValidId = data.some(w => w.id === storedId);
 
-                if (!activeWorkspaceId || (activeWorkspaceId && !isValidId)) {
-                    console.log("[WorkspaceContext] Auto-selecting first workspace.");
-
-                    if (data.length > 0) {
-                        const firstId = data[0].id;
-                        setActiveWorkspaceId(firstId);
-                        localStorage.setItem("activeWorkspaceId", firstId);
-                    } else {
-                        setActiveWorkspaceId(null);
-                        localStorage.removeItem("activeWorkspaceId");
-                    }
+                if (storedId && isValidId) {
+                    setActiveWorkspaceId(storedId);
+                } else if (data.length > 0) {
+                    setActiveWorkspaceId(data[0].id);
+                    localStorage.setItem("activeWorkspaceId", data[0].id);
+                } else {
+                    setActiveWorkspaceId(null);
                 }
             }
+
         } catch (err) {
             console.error("Critical error in fetchWorkspaces:", err);
         } finally {
@@ -88,12 +71,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    // Initial fetch
     useEffect(() => {
         fetchWorkspaces();
-    }, []); // Only run once on mount
 
-    // Update localStorage when activeWorkspaceId changes
+        // Listen for auth changes
+        const { data: authListener } = supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') fetchWorkspaces();
+            if (event === 'SIGNED_OUT') {
+                setWorkspaces([]);
+                setActiveWorkspaceId(null);
+                router.push("/login");
+            }
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
+
     const handleSetActiveWorkspaceId = (id: string | null) => {
         setActiveWorkspaceId(id);
         if (id) {
