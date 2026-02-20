@@ -6,6 +6,32 @@ export type Workspace = {
   created_at?: string;
 };
 
+export type WorkspaceRole = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  permissions: Record<string, boolean>;
+  is_system_default: boolean;
+  created_at: string;
+};
+
+export type WorkspaceMember = {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role_id: string;
+  role_name?: string;
+  member_type: 'human' | 'ai';
+  joined_at: string;
+  invited_by?: string;
+  users?: {
+    email: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+};
+
 
 
 export type TaskHistory = {

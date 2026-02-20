@@ -48,6 +48,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (data) {
+                // Handle Empty State (Onboarding)
+                if (data.length === 0 && window.location.pathname !== '/get-started') {
+                    console.log("No workspaces found, redirecting to onboarding...");
+                    window.location.href = '/get-started';
+                    return;
+                }
+
                 setWorkspaces(data);
 
                 // Logic to set active workspace
