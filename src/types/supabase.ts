@@ -59,6 +59,8 @@ export type Document = {
     tokens?: number;
     model?: string;
     due_date?: string; // ISO Date for Calendar View
+    priority?: number;
+    progress?: number;
   };
   is_archived?: boolean;
   parent_id?: string | null;
